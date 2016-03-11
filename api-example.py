@@ -14,7 +14,7 @@ import datetime
 
 
 #
-# ThousandEyesApi class includes methods to interact with the ThousandEyes API
+# ThousandEyesApi class provides methods to interact with the ThousandEyes API
 #
 class ThousandEyesApi:
 
@@ -116,26 +116,26 @@ class ThousandEyesApi:
 ################################################################################
 
 # ThousandEyes API requires username and API token. These should be provided as
-# parameters from the CLI. User can optionally provide a number of a sample to
-# be ran. Defaults to sample #1.
+# parameters from the CLI. User can optionally provide a number of an example to
+# be ran. Defaults to example #1.
 if len(sys.argv) != 3 and len(sys.argv) != 4:
-    sys.exit('Use: ' + sys.argv[0] + ' <email> <apiToken> [sampleNumber]')
+    sys.exit('Use: ' + sys.argv[0] + ' <email> <apiToken> [exampleNumber]')
 
 username = sys.argv[1]
 apiToken = sys.argv[2]
 if len(sys.argv) == 4:
-    sampleNo = int(sys.argv[3])
+    exampleNo = int(sys.argv[3])
 else:
-    sampleNo = 1
+    exampleNo = 1
 
 
 
 #
-# Sample #1
+# Example #1
 #
 # Print IP addresses of all Cloud Agents available to your account
 #
-if sampleNo == 1:
+if exampleNo == 1:
 
     # Establish connection with the API, use your email and API token
     api = ThousandEyesApi(username, apiToken)
@@ -155,12 +155,12 @@ if sampleNo == 1:
 
 
 #
-# Sample #2
+# Example #2
 #
 # Create a new HTTP server test and add it to all Enterprise agents that are
 # currently Online.
 #
-if sampleNo == 2:
+if exampleNo == 2:
 
     # Establish connection with the API, use your email and API token
     api = ThousandEyesApi(username, apiToken)
