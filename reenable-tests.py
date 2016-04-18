@@ -169,68 +169,72 @@ if len(sys.argv) == 4:
 
 
 issueStart = '2016-04-15 01:00:00'
-issueEnd = '2016-04-15 03:00:00'
+issueEnd = '2016-04-15 02:00:00'
 
 api = ThousandEyesApi(username, apiToken)
 
-data = api.getRequest('/tests')
+accData = api.getRequest('/accounts')
 
-""" A list of enabled test IDs that were not modified since the T time """
-candidateTests = []
+for account in accData['account']:
 
-for test in data['test']:
-    if test['enabled'] == 1:
-        if 'modifiedDate' in test.keys():
-            dt = datetime.strptime(test['modifiedDate'], '%Y-%m-%d %H:%M:%S')
-            if dt < datetime.strptime(issueStart, '%Y-%m-%d %H:%M:%S'):
-                candidateTests.append({'testId': test['testId'], 'type': test['type'], 'testName': test['testName']})
+    aid = account['aid']
 
-print(str(len(candidateTests)) + ' candidate tests are enabled and were not modified since ' + issueStart + ' UTC.')
+    data = api.getRequest('/tests', {'aid': aid})
 
-""" A list of tests that need to be reenabled """
-reTests = []
+    """ A list of enabled test IDs that were not modified since the T time """
+    candidateTests = []
 
-for test in candidateTests:
-    time.sleep(0.1)
-    results = []
-    if test['type'] == 'http-server':
-        data = api.getRequest('/web/http-server/' + str(test['testId']))
-        results = data['web']['httpServer']
-    elif test['type'] == 'page-load':
-        data = api.getRequest('/web/page-load/' + str(test['testId']))
-        results = data['web']['pageLoad']
-    elif test['type'] == 'transaction':
-        data = api.getRequest('/web/transactions/' + str(test['testId']))
-        results = data['web']['transaction']
-    elif test['type'] == 'dns-trace':
-        data = api.getRequest('/dns/trace/' + str(test['testId']))
-        results = data['dns']['trace']
+    for test in data['test']:
+        if test['enabled'] == 1:
+            if 'modifiedDate' in test.keys():
+                dt = datetime.strptime(test['modifiedDate'], '%Y-%m-%d %H:%M:%S')
+                if dt < datetime.strptime(issueStart, '%Y-%m-%d %H:%M:%S'):
+                    candidateTests.append({'testId': test['testId'], 'type': test['type'], 'testName': test['testName']})
+
+    """ A list of tests that need to be reenabled """
+    reTests = []
+
+    for test in candidateTests:
+        time.sleep(0.1)
+        results = []
+        if test['type'] == 'http-server':
+            data = api.getRequest('/web/http-server/' + str(test['testId']), {'aid': aid})
+            results = data['web']['httpServer']
+        elif test['type'] == 'page-load':
+            data = api.getRequest('/web/page-load/' + str(test['testId']), {'aid': aid})
+            results = data['web']['pageLoad']
+        elif test['type'] == 'transaction':
+            data = api.getRequest('/web/transactions/' + str(test['testId']), {'aid': aid})
+            results = data['web']['transaction']
+        elif test['type'] == 'dns-trace':
+            data = api.getRequest('/dns/trace/' + str(test['testId']), {'aid': aid})
+            results = data['dns']['trace']
+        else:
+            continue
+
+        latestDate = datetime.strptime(issueEnd, '%Y-%m-%d %H:%M:%S')
+        for result in results:
+            if datetime.strptime(result['date'], '%Y-%m-%d %H:%M:%S') > latestDate:
+                latestDate = datetime.strptime(result['date'], '%Y-%m-%d %H:%M:%S');
+
+        if latestDate >= datetime.strptime(issueStart, '%Y-%m-%d %H:%M:%S') and latestDate <= datetime.strptime(issueEnd, '%Y-%m-%d %H:%M:%S'):
+            reTests.append(test)
+            print(str(test['testId']) + '\t' + account['accountName'] + '\t' + test['testName'])
+
+    print(str(len(reTests)) + ' of ' + str(len(candidateTests)) + ' candidate tests have last result between ' + issueStart + ' and ' + issueEnd + ' UTC.')
+
+    if (reenable == False):
+        print ('Doing nothing about it. Set reenable argument to true to re-enable the probematic tests.')
     else:
-        continue
+        totalRe = 0;
+        for test in reTests:
+            time.sleep(0.2)
+            print(test['testId'])
+            result = api.postRequest('/tests/' + test['type'] + '/' + str(test['testId']) + '/update', {"enabled": 0}, {'aid': aid})
+            print(result)
+            result = api.postRequest('/tests/' + test['type'] + '/' + str(test['testId']) + '/update', {"enabled": 1}, {'aid': aid})
+            print(result)
+            sys.stdout.write('!')
+            totalRe += 1
 
-    latestDate = datetime.strptime(issueEnd, '%Y-%m-%d %H:%M:%S')
-    for result in results:
-        if datetime.strptime(result['date'], '%Y-%m-%d %H:%M:%S') > latestDate:
-            latestDate = datetime.strptime(result['date'], '%Y-%m-%d %H:%M:%S');
-
-    if latestDate >= datetime.strptime(issueStart, '%Y-%m-%d %H:%M:%S') and latestDate <= datetime.strptime(issueEnd, '%Y-%m-%d %H:%M:%S'):
-        reTests.append(test)
-        print(str(test['testId']) + '\t' + test['testName'])
-
-print(str(len(reTests)) + ' of ' + str(len(candidateTests)) + ' candidate tests have no results past ' + issueEnd + ' UTC.')
-
-if (reenable == False):
-    print ('Doing nothing about it. Set reenable argument to true to re-enable the probematic tests.')
-else:
-    totalRe = 0;
-    for test in reTests:
-        time.sleep(0.2)
-        print(test['testId'])
-        result = api.postRequest('/tests/' + test['type'] + '/' + str(test['testId']) + '/update', {"enabled": 0})
-        print(result)
-        result = api.postRequest('/tests/' + test['type'] + '/' + str(test['testId']) + '/update', {"enabled": 1})
-        print(result)
-        sys.stdout.write('!')
-        totalRe += 1
-
-    print(str(totalRe) + ' tests re-enabled.')
+        print(str(totalRe) + ' tests re-enabled.')
