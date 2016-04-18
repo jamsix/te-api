@@ -168,7 +168,7 @@ if len(sys.argv) == 4:
         reenable = True
 
 
-issueStart = '2016-04-15 01:30:00'
+issueStart = '2016-04-15 01:00:00'
 issueEnd = '2016-04-15 03:00:00'
 
 api = ThousandEyesApi(username, apiToken)
@@ -183,7 +183,7 @@ for test in data['test']:
         if 'modifiedDate' in test.keys():
             dt = datetime.strptime(test['modifiedDate'], '%Y-%m-%d %H:%M:%S')
             if dt < datetime.strptime(issueStart, '%Y-%m-%d %H:%M:%S'):
-                candidateTests.append({'testId': test['testId'], 'type': test['type']})
+                candidateTests.append({'testId': test['testId'], 'type': test['type'], 'testName': test['testName']})
 
 print(str(len(candidateTests)) + ' candidate tests are enabled and were not modified since ' + issueStart + ' UTC.')
 
@@ -205,16 +205,17 @@ for test in candidateTests:
     elif test['type'] == 'dns-trace':
         data = api.getRequest('/dns/trace/' + str(test['testId']))
         results = data['dns']['trace']
+    else:
+        continue
 
     latestDate = datetime.strptime(issueEnd, '%Y-%m-%d %H:%M:%S')
     for result in results:
         if datetime.strptime(result['date'], '%Y-%m-%d %H:%M:%S') > latestDate:
             latestDate = datetime.strptime(result['date'], '%Y-%m-%d %H:%M:%S');
 
-    if latestDate <= datetime.strptime(issueEnd, '%Y-%m-%d %H:%M:%S'):
+    if latestDate >= datetime.strptime(issueStart, '%Y-%m-%d %H:%M:%S') and latestDate <= datetime.strptime(issueEnd, '%Y-%m-%d %H:%M:%S'):
         reTests.append(test)
-
-    sys.stdout.write('.')
+        print(str(test['testId']) + '\t' + test['testName'])
 
 print(str(len(reTests)) + ' of ' + str(len(candidateTests)) + ' candidate tests have no results past ' + issueEnd + ' UTC.')
 
@@ -225,9 +226,9 @@ else:
     for test in reTests:
         time.sleep(0.2)
         print(test['testId'])
-        result = api.postRequest('/tests/' + test['type'] + '/update', {"enabled": 0})
+        result = api.postRequest('/tests/' + test['type'] + '/' + str(test['testId']) + '/update', {"enabled": 0})
         print(result)
-        result = api.postRequest('/tests/' + test['type'] + '/update', {"enabled": 1})
+        result = api.postRequest('/tests/' + test['type'] + '/' + str(test['testId']) + '/update', {"enabled": 1})
         print(result)
         sys.stdout.write('!')
         totalRe += 1
