@@ -10,10 +10,10 @@
       <th style="text-align:left">Title</th>
       <th style="text-align:left">Artist</th>
     </tr>
-    <xsl:for-each select="catalog/cd">
+    <xsl:for-each select="teResults/alert">
     <tr>
-      <td><xsl:value-of select="title" /></td>
-      <td><xsl:value-of select="artist" /></td>
+      <td><xsl:value-of select="alertId" /></td>
+      <td><xsl:value-of select="dateStart" /></td>
     </tr>
     </xsl:for-each>
   </table>
