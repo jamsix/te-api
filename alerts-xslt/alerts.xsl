@@ -4,16 +4,20 @@
 <xsl:template match="/">
   <html>
   <body>
-  <h2>My CD Collection</h2>
-  <table border="1">
-    <tr bgcolor="#9acd32">
-      <th style="text-align:left">Title</th>
-      <th style="text-align:left">Artist</th>
+  <h2>Alerts</h2>
+  <table>
+    <tr>
+      <th style="text-align:left">Alert ID</th>
+      <th style="text-align:left">Date Start</th>
+      <th style="text-align:left">Scope</th>
+      <th style="text-align:left">Test Name</th>
     </tr>
     <xsl:for-each select="teResults/alert">
     <tr>
       <td><xsl:value-of select="alertId" /></td>
       <td><xsl:value-of select="dateStart" /></td>
+      <td><xsl:value-of select="violationCount" /></td>
+      <td><xsl:value-of select="testName" /></td>
     </tr>
     </xsl:for-each>
   </table>
