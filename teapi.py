@@ -2,6 +2,8 @@
 
 import urllib, urllib2
 import json
+import time
+import httplib
 
 
 
@@ -18,7 +20,8 @@ class ThousandEyesApi:
         ThousandEyes platform user API token
 
     accountGroupId : str, optional
-        ThousandEyes platform account group ID. If not set, user's default account group is used.
+        ThousandEyes platform account group ID. If not set, user's default
+        account group is used.
 
     Methods
     -------
@@ -72,19 +75,33 @@ class ThousandEyesApi:
 
         req = urllib2.Request(uri)
 
-        try:
-            result = director.open(req)
-        except urllib2.HTTPError, e:
-            print('HTTPError = ' + str(e.code))
-        except urllib2.URLError, e:
-            print('URLError = ' + str(e.reason))
-        except httplib.HTTPException, e:
-            print('HTTPException')
-        # result.read() will contain the data
-        # result.info() will contain the HTTP headers
+        """
+        The ThousandEyes API throttles inbound API requests using a 240 request
+        per minute, per organization limit.
+        API request is encompassed with a for loop. If request returns a 429
+        response code (Too many requests), it is repeated 10 seconds later, up
+        to 10 times.
+        """
+        for n in range(0,10):
+            try:
+                """ Issue the API request """
+                result = director.open(req)
+            except urllib2.HTTPError, e:
+                if 429 == e.code:
+                    """ Issuing too many requests. Sleep 10 seconds and retry. """
+                    time.sleep(10)
+                    continue
+                raise Exception("API HTTP error: " + str(e.code) + " " + e.reason)
+            except urllib2.URLError, e:
+                raise Exception("API URL error: " + e.reason)
+            except httplib.HTTPException, e:
+                raise Exception("API HTTP exception: " + e.reason)
+            # result.read() will contain the data
+            # result.info() will contain the HTTP headers
 
-        #response = requests.get(uri)
-        return json.loads(result.read())
+            return json.loads(result.read())
+
+        return
 
 
     def postRequest(self, endpoint, properties, uriParameters = {}):
@@ -127,13 +144,30 @@ class ThousandEyesApi:
 
         req = urllib2.Request(uri, postData, headers)
 
-        try:
-            result = director.open(req)
-        except urllib2.HTTPError, e:
-            print('HTTPError = ' + str(e.code))
-        except urllib2.URLError, e:
-            print('URLError = ' + str(e.reason))
-        except httplib.HTTPException, e:
-            print('HTTPException')
+        """
+        The ThousandEyes API throttles inbound API requests using a 240 request
+        per minute, per organization limit.
+        API request is encompassed with a for loop. If request returns a 429
+        response code (Too many requests), it is repeated 10 seconds later, up
+        to 10 times.
+        """
+        for n in range(0,10):
+            try:
+                """ Issue the API request """
+                result = director.open(req)
+            except urllib2.HTTPError, e:
+                if 429 == e.code:
+                    """ Issuing too many requests. Sleep 10 seconds and retry. """
+                    time.sleep(10)
+                    continue
+                raise Exception("API HTTP error: " + str(e.code) + " " + e.reason)
+            except urllib2.URLError, e:
+                raise Exception("API URL error: " + e.reason)
+            except httplib.HTTPException, e:
+                raise Exception("API HTTP exception: " + e.reason)
+            # result.read() will contain the data
+            # result.info() will contain the HTTP headers
 
-        return json.loads(result.read())
+            return json.loads(result.read())
+
+        return

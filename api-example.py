@@ -10,6 +10,7 @@ import sys
 import urllib, urllib2
 import json
 import datetime
+import time
 
 
 
@@ -26,7 +27,8 @@ class ThousandEyesApi:
         ThousandEyes platform user API token
 
     accountGroupId : str, optional
-        ThousandEyes platform account group ID. If not set, user's default account group is used.
+        ThousandEyes platform account group ID. If not set, user's default
+        account group is used.
 
     Methods
     -------
@@ -80,19 +82,33 @@ class ThousandEyesApi:
 
         req = urllib2.Request(uri)
 
-        try:
-            result = director.open(req)
-        except urllib2.HTTPError, e:
-            print('HTTPError = ' + str(e.code))
-        except urllib2.URLError, e:
-            print('URLError = ' + str(e.reason))
-        except httplib.HTTPException, e:
-            print('HTTPException')
-        # result.read() will contain the data
-        # result.info() will contain the HTTP headers
+        """
+        The ThousandEyes API throttles inbound API requests using a 240 request
+        per minute, per organization limit.
+        API request is encompassed with a for loop. If request returns a 429
+        response code (Too many requests), it is repeated 10 seconds later, up
+        to 10 times.
+        """
+        for n in range(0,10):
+            try:
+                """ Issue the API request """
+                result = director.open(req)
+            except urllib2.HTTPError, e:
+                if 429 == e.code:
+                    """ Issuing too many requests. Sleep 10 seconds and retry. """
+                    time.sleep(10)
+                    continue
+                raise Exception("API HTTP error: " + str(e.code) + " " + e.reason)
+            except urllib2.URLError, e:
+                raise Exception("API URL error: " + e.reason)
+            except httplib.HTTPException, e:
+                raise Exception("API HTTP exception: " + e.reason)
+            # result.read() will contain the data
+            # result.info() will contain the HTTP headers
 
-        #response = requests.get(uri)
-        return json.loads(result.read())
+            return json.loads(result.read())
+
+        return
 
 
     def postRequest(self, endpoint, properties, uriParameters = {}):
@@ -135,16 +151,33 @@ class ThousandEyesApi:
 
         req = urllib2.Request(uri, postData, headers)
 
-        try:
-            result = director.open(req)
-        except urllib2.HTTPError, e:
-            print('HTTPError = ' + str(e.code))
-        except urllib2.URLError, e:
-            print('URLError = ' + str(e.reason))
-        except httplib.HTTPException, e:
-            print('HTTPException')
+        """
+        The ThousandEyes API throttles inbound API requests using a 240 request
+        per minute, per organization limit.
+        API request is encompassed with a for loop. If request returns a 429
+        response code (Too many requests), it is repeated 10 seconds later, up
+        to 10 times.
+        """
+        for n in range(0,10):
+            try:
+                """ Issue the API request """
+                result = director.open(req)
+            except urllib2.HTTPError, e:
+                if 429 == e.code:
+                    """ Issuing too many requests. Sleep 10 seconds and retry. """
+                    time.sleep(10)
+                    continue
+                raise Exception("API HTTP error: " + str(e.code) + " " + e.reason)
+            except urllib2.URLError, e:
+                raise Exception("API URL error: " + e.reason)
+            except httplib.HTTPException, e:
+                raise Exception("API HTTP exception: " + e.reason)
+            # result.read() will contain the data
+            # result.info() will contain the HTTP headers
 
-        return json.loads(result.read())
+            return json.loads(result.read())
+
+        return
 
 
 
@@ -185,16 +218,19 @@ if exampleNo == 1:
     api = ThousandEyesApi(username, apiToken)
 
     """ Get all agent data from the /agents API endpoint """
-    data = api.getRequest('/agents')
-
-    """ Loop through all the agents """
-    for agent in data['agents']:
-        """ We are only interested in Cloud agents, not in Enterprise agents """
-        if agent['agentType'] == 'Cloud':
-            if agent['ipAddresses']:
-                """ Each Cloud agent has multiple IP addresses, loop through all """
-                for ipAddress in agent['ipAddresses']:
-                    print(ipAddress)
+    try:
+        data = api.getRequest('/agents')
+    except Exception, e:
+        print(e)
+    else:
+        """ Loop through all the agents """
+        for agent in data['agents']:
+            """ We are only interested in Cloud agents, not in Enterprise agents """
+            if agent['agentType'] == 'Cloud':
+                if agent['ipAddresses']:
+                    """ Each Cloud agent has multiple IP addresses, loop through all """
+                    for ipAddress in agent['ipAddresses']:
+                        print(ipAddress)
 
 
 
@@ -210,42 +246,45 @@ if exampleNo == 2:
     api = ThousandEyesApi(username, apiToken)
 
     """ Get all agent data from the /agents API endpoint """
-    data = api.getRequest('/agents')
+    try:
+        data = api.getRequest('/agents')
+    except Exception, e:
+        print(e)
+    else:
+        """ Put all Enterprise agent IDs in a single list """
+        enterpriseAgentIds = []
+        """ Loop through all the agents """
+        for agent in data['agents']:
+            """ We are only interested in Enterprise agents that are currently online """
+            if agent['agentType'] == 'Enterprise' and agent['agentState'] == 'Online':
+                enterpriseAgentIds.append(agent['agentId'])
 
-    """ Put all Enterprise agent IDs in a single list """
-    enterpriseAgentIds = []
-    """ Loop through all the agents """
-    for agent in data['agents']:
-        """ We are only interested in Enterprise agents that are currently online """
-        if agent['agentType'] == 'Enterprise' and agent['agentState'] == 'Online':
-            enterpriseAgentIds.append(agent['agentId'])
+        """ Test type is HTTP Server """
+        testType = 'http-server'
 
-    """ Test type is HTTP Server """
-    testType = 'http-server'
+        """
+        Configure new test properties
+        List of properties is found at http://developer.thousandeyes.com/tests/#/test_metadata
+        """
+        properties = {}
+        """ Test will be called 'API test <date time>' """
+        properties['testName'] = 'API test ' + datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H:%M:%S')
+        """ Run once every hour """
+        properties['interval'] = 3600
+        """ Query the www.thousandeyes.com website """
+        properties['url'] = 'http://www.thousandeyes.com'
+        """ Disable alerts """
+        properties['alertsEnabled'] = 0
+        """ Run the test on the Enterprise agents that are currently online """
+        properties['agents'] = []
+        for agentId in enterpriseAgentIds:
+            properties['agents'].append({"agentId": agentId})
 
-    """
-    Configure new test properties
-    List of properties is found at http://developer.thousandeyes.com/tests/#/test_metadata
-    """
-    properties = {}
-    """ Test will be called 'API test <date time>' """
-    properties['testName'] = 'API test ' + datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H:%M:%S')
-    """ Run once every hour """
-    properties['interval'] = 3600
-    """ Query the www.thousandeyes.com website """
-    properties['url'] = 'http://www.thousandeyes.com'
-    """ Disable alerts """
-    properties['alertsEnabled'] = 0
-    """ Run the test on the Enterprise agents that are currently online """
-    properties['agents'] = []
-    for agentId in enterpriseAgentIds:
-        properties['agents'].append({"agentId": agentId})
+        """ Create the test """
+        result = api.postRequest('/tests/' + testType + '/new', properties)
 
-    """ Create the test """
-    result = api.postRequest('/tests/' + testType + '/new', properties)
-
-    """ Print out the results of the new test call """
-    print ('Test ' + result['test'][0]['testName'] + ' created.')
-    print ('Currently running on agents:')
-    for agent in result['test'][0]['agents']:
-        print ('- ' + agent['agentName'])
+        """ Print out the results of the new test call """
+        print ('Test ' + result['test'][0]['testName'] + ' created.')
+        print ('Currently running on agents:')
+        for agent in result['test'][0]['agents']:
+            print ('- ' + agent['agentName'])
