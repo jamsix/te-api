@@ -99,11 +99,12 @@ class ThousandEyesApi:
                     """ Issuing too many requests. Sleep 10 seconds and retry. """
                     time.sleep(10)
                     continue
-                raise Exception("API HTTP error: " + str(e.code) + " " + e.reason)
+                """ We cannot handle other HTTP errors """
+                raise Exception("API HTTP error: " + str(e.code) + " " + str(e.reason))
             except urllib2.URLError, e:
-                raise Exception("API URL error: " + e.reason)
+                raise Exception("API URL error: " + str(e.reason))
             except httplib.HTTPException, e:
-                raise Exception("API HTTP exception: " + e.reason)
+                raise Exception("API HTTP exception: " + str(e.reason))
             # result.read() will contain the data
             # result.info() will contain the HTTP headers
 
@@ -168,11 +169,11 @@ class ThousandEyesApi:
                     """ Issuing too many requests. Sleep 10 seconds and retry. """
                     time.sleep(10)
                     continue
-                raise Exception("API HTTP error: " + str(e.code) + " " + e.reason)
+                raise Exception("API HTTP error: " + str(e.code) + " " + str(e.reason))
             except urllib2.URLError, e:
-                raise Exception("API URL error: " + e.reason)
+                raise Exception("API URL error: " + str(e.reason))
             except httplib.HTTPException, e:
-                raise Exception("API HTTP exception: " + e.reason)
+                raise Exception("API HTTP exception: " + str(e.reason))
             # result.read() will contain the data
             # result.info() will contain the HTTP headers
 
@@ -222,7 +223,7 @@ if exampleNo == 1:
     try:
         data = api.getRequest('/agents')
     except Exception, e:
-        print(e)
+        print str(e)
     else:
         """ Loop through all the agents """
         for agent in data['agents']:
@@ -250,7 +251,7 @@ if exampleNo == 2:
     try:
         data = api.getRequest('/agents')
     except Exception, e:
-        print(e)
+        print str(e)
     else:
         """ Put all Enterprise agent IDs in a single list """
         enterpriseAgentIds = []
