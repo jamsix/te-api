@@ -197,12 +197,12 @@ class ThousandEyesApi:
  parameters from the CLI. User can optionally provide a number of an example to
  be ran. Defaults to example #1.
 """
-if len(sys.argv) != 3 and len(sys.argv) != 4:
+if len(sys.argv) != 3 and len(sys.argv) != 4 and len(sys.argv) != 5:
     sys.exit('Use: ' + sys.argv[0] + ' <email> <apiToken> [exampleNumber]')
 
 username = sys.argv[1]
 apiToken = sys.argv[2]
-if len(sys.argv) == 4:
+if len(sys.argv) > 4:
     exampleNo = int(sys.argv[3])
 else:
     exampleNo = 1
@@ -290,3 +290,40 @@ if exampleNo == 2:
         print ('Currently running on agents:')
         for agent in result['test'][0]['agents']:
             print ('- ' + agent['agentName'])
+
+"""
+    Example #3
+
+    This example gets the dns test data for the test id and aggregates to calculate
+    the availability for the given test across all servers and agents
+    NOTE: Only gets the data for the last round of testing!
+    NOTE: If the test is still in progress, it will return partial data
+
+"""
+
+if exampleNo == 3:
+    if not len(sys.argv) == 5:
+        sys.exit('Use: ' + sys.argv[0] + ' <email> <apiToken> <exampleNumber> <testId>')
+    testId  = sys.argv[4]
+
+    """ establish the API object with credentials
+        get the test data for the testId """
+    api = ThousandEyesApi(username, apiToken)
+    testData = api.getRequest('/dns/server/' + str(testId) + '.json')
+
+    """ Check if we have a DNS test on our hands otherwise we exit """
+    if not (testData['dns']['test']['type'] == 'dns-server'):
+        sys.exit('This example requires a DNS server test')
+
+    """ iterate the DNS results and analyze response """
+    numTest = 0
+    numSuccessfull = 0
+
+    for server in testData['dns']['server']:
+        numTest += 1
+        """ if resolutionTime is present in test result that means the test was successfull """
+        if 'resolutionTime' in server:
+            numSuccessfull += 1
+    availability = float(numSuccessfull) / float(numTest)
+
+    print 'Availability for the last test run is {0:.2f}%'.format(100*availability)
