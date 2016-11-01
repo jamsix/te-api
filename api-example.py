@@ -356,9 +356,9 @@ if exampleNo == 2:
     Example #3
 
     This example gets the dns test data for the test id and aggregates to calculate
-    the availability for the given test across all servers and agents
+    the availability for the given test across all servers and agents.
     NOTE: Only gets the data for the last round of testing!
-    NOTE: If the test is still in progress, it will return partial data
+    NOTE: If the test is still in progress, it will return partial data.
 """
 if exampleNo == 3:
     if not len(sys.argv) == 5:
@@ -366,7 +366,7 @@ if exampleNo == 3:
     testId  = sys.argv[4]
 
     """ Establish the API object with credentials
-        Get the test data for the testId """
+        Get the test data for the testId. """
     api = ThousandEyesApi(username, apiToken)
     testData = api.getRequest('/dns/server/' + str(testId) + '.json')
 
@@ -374,18 +374,18 @@ if exampleNo == 3:
     if not (testData['dns']['test']['type'] == 'dns-server'):
         sys.exit('This example requires a DNS server test.')
 
-    """ Iterate the DNS results and analyze response """
+    """ Iterate the DNS results and analyze response. """
     numTest = 0
     numSuccessful = 0
 
     for server in testData['dns']['server']:
         numTest += 1
-        """ If resolutionTime is present in test result that means the test was Successful """
+        """ If resolutionTime is present in test result that means the test was Successful. """
         if 'resolutionTime' in server:
             numSuccessful += 1
     availability = float(numSuccessful) / float(numTest)
 
-    print 'Availability for the last test run is {0:.2f}%'.format(100*availability)
+    print 'Availability for the last test run is {0:.2f}%.'.format(100*availability)
 
 
 """
