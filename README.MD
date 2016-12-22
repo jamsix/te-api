@@ -15,4 +15,5 @@ A basic ThousandEyes API script showcasing 3 Examples
 3.  This example gets the dns test data for the test id and aggregates to calculate the availability for the given test across all servers and agents.
 
 api-processDNSTrace.py
+----------------------
 In this example we take the DNS Trace test data in a time window (parameter) and aggregate the mappings per agent over time (in time periods - parameter) in a form of an CSV file which gets created in working directory.
