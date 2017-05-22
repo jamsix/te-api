@@ -1,19 +1,19 @@
 #!/usr/bin/python
 
-"""
-
- ThousandEyesApi class. Do not edit. Scroll down to the bottom to make changes
-
-"""
-
 import sys
 import urllib, urllib2
 import json
 import datetime
 import httplib
 import time
+import calendar
+import csv
 
+"""
 
+ ThousandEyesApi class.
+
+"""
 
 class ThousandEyesApi:
     """
@@ -73,6 +73,63 @@ class ThousandEyesApi:
         uriParameters['format'] = 'json'
 
         uri = self.apiUri.strip('/') + '/' + endpoint.strip('/') + '?' + urllib.urlencode(uriParameters)
+        #print(uri)
+
+        passwordManager = urllib2.HTTPPasswordMgrWithDefaultRealm()
+        passwordManager.add_password(None, self.apiUri, self.email, self.authToken)
+        handler = urllib2.HTTPBasicAuthHandler(passwordManager)
+
+        director = urllib2.build_opener(handler)
+
+        req = urllib2.Request(uri)
+
+        """
+        The ThousandEyes API throttles inbound API requests using a 240 request
+        per minute, per organization limit.
+        API request is encompassed with a for loop. If request returns a 429
+        response code (Too many requests), it is repeated 10 seconds later, up
+        to 10 times.
+        """
+        for n in range(0,10):
+            try:
+                """ Issue the API request """
+                result = director.open(req)
+            except urllib2.HTTPError, e:
+                if 429 == e.code:
+                    """ Issuing too many requests. Sleep 10 seconds and retry. """
+                    time.sleep(10)
+                    continue
+                """ We cannot handle other HTTP errors """
+                raise Exception("API HTTP error: " + str(e.code) + " " + str(e.reason))
+            except urllib2.URLError, e:
+                raise Exception("API URL error: " + str(e.reason))
+            except httplib.HTTPException, e:
+                raise Exception("API HTTP exception: " + str(e.reason))
+            # result.read() will contain the data
+            # result.info() will contain the HTTP headers
+
+            return json.loads(result.read())
+
+        return
+
+
+    def getPureUrlRequest(self, uri):
+        """
+        Performs GET HTTP request to desired API URL and returns JSON data
+        Does not manage parameters. Use for pagination
+
+        Parameters
+        ----------
+        url : str
+            ThousandEyes API endpoint URL
+
+        Returns
+        -------
+        object
+            ThousandEyes API result object. Refer to the API endpoint documentation
+            for return object description.
+        """
+
         #print(uri)
 
         passwordManager = urllib2.HTTPPasswordMgrWithDefaultRealm()
@@ -182,9 +239,6 @@ class ThousandEyesApi:
         return
 
 
-
-
-
 """
 
  Showcase script that utilizes the ThousandEyesApi class. Modify to achieve
@@ -197,12 +251,12 @@ class ThousandEyesApi:
  parameters from the CLI. User can optionally provide a number of an example to
  be ran. Defaults to example #1.
 """
-if len(sys.argv) != 3 and len(sys.argv) != 4 and len(sys.argv) != 5:
+if len(sys.argv) < 3 or len(sys.argv) > 5:
     sys.exit('Use: ' + sys.argv[0] + ' <email> <apiToken> [exampleNumber]')
 
 username = sys.argv[1]
 apiToken = sys.argv[2]
-if len(sys.argv) > 4:
+if len(sys.argv) >= 4:
     exampleNo = int(sys.argv[3])
 else:
     exampleNo = 1
@@ -213,6 +267,7 @@ else:
  Example #1
 
  Print IP addresses of all Cloud Agents available to your account
+
 """
 if exampleNo == 1:
 
@@ -297,9 +352,9 @@ if exampleNo == 2:
     Example #3
 
     This example gets the dns test data for the test id and aggregates to calculate
-    the availability for the given test across all servers and agents
+    the availability for the given test across all servers and agents.
     NOTE: Only gets the data for the last round of testing!
-    NOTE: If the test is still in progress, it will return partial data
+    NOTE: If the test is still in progress, it will return partial data.
 """
 if exampleNo == 3:
     if not len(sys.argv) == 5:
@@ -307,23 +362,23 @@ if exampleNo == 3:
     testId  = sys.argv[4]
 
     """ Establish the API object with credentials
-        Get the test data for the testId """
+        Get the test data for the testId. """
     api = ThousandEyesApi(username, apiToken)
     testData = api.getRequest('/dns/server/' + str(testId) + '.json')
 
     """ Check if we have a DNS test on our hands otherwise we exit """
     if not (testData['dns']['test']['type'] == 'dns-server'):
-        sys.exit('This example requires a DNS server test')
+        sys.exit('This example requires a DNS server test.')
 
-    """ Iterate the DNS results and analyze response """
+    """ Iterate the DNS results and analyze response. """
     numTest = 0
     numSuccessful = 0
 
     for server in testData['dns']['server']:
         numTest += 1
-        """ If resolutionTime is present in test result that means the test was Successful """
+        """ If resolutionTime is present in test result that means the test was Successful. """
         if 'resolutionTime' in server:
             numSuccessful += 1
     availability = float(numSuccessful) / float(numTest)
 
-    print 'Availability for the last test run is {0:.2f}%'.format(100*availability)
+    print 'Availability for the last test run is {0:.2f}%.'.format(100*availability)

@@ -5,7 +5,11 @@ import json
 import httplib
 import time
 
+"""
 
+ ThousandEyesApi class. 
+
+"""
 
 class ThousandEyesApi:
     """
@@ -65,6 +69,63 @@ class ThousandEyesApi:
         uriParameters['format'] = 'json'
 
         uri = self.apiUri.strip('/') + '/' + endpoint.strip('/') + '?' + urllib.urlencode(uriParameters)
+        #print(uri)
+
+        passwordManager = urllib2.HTTPPasswordMgrWithDefaultRealm()
+        passwordManager.add_password(None, self.apiUri, self.email, self.authToken)
+        handler = urllib2.HTTPBasicAuthHandler(passwordManager)
+
+        director = urllib2.build_opener(handler)
+
+        req = urllib2.Request(uri)
+
+        """
+        The ThousandEyes API throttles inbound API requests using a 240 request
+        per minute, per organization limit.
+        API request is encompassed with a for loop. If request returns a 429
+        response code (Too many requests), it is repeated 10 seconds later, up
+        to 10 times.
+        """
+        for n in range(0,10):
+            try:
+                """ Issue the API request """
+                result = director.open(req)
+            except urllib2.HTTPError, e:
+                if 429 == e.code:
+                    """ Issuing too many requests. Sleep 10 seconds and retry. """
+                    time.sleep(10)
+                    continue
+                """ We cannot handle other HTTP errors """
+                raise Exception("API HTTP error: " + str(e.code) + " " + str(e.reason))
+            except urllib2.URLError, e:
+                raise Exception("API URL error: " + str(e.reason))
+            except httplib.HTTPException, e:
+                raise Exception("API HTTP exception: " + str(e.reason))
+            # result.read() will contain the data
+            # result.info() will contain the HTTP headers
+
+            return json.loads(result.read())
+
+        return
+
+
+    def getPureUrlRequest(self, uri):
+        """
+        Performs GET HTTP request to desired API URL and returns JSON data
+        Does not manage parameters. Use for pagination
+
+        Parameters
+        ----------
+        url : str
+            ThousandEyes API endpoint URL
+
+        Returns
+        -------
+        object
+            ThousandEyes API result object. Refer to the API endpoint documentation
+            for return object description.
+        """
+
         #print(uri)
 
         passwordManager = urllib2.HTTPPasswordMgrWithDefaultRealm()
